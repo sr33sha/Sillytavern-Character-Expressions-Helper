@@ -1,0 +1,5 @@
+#expressions_helper_container .inline-drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
