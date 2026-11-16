@@ -24,4 +24,4 @@ That's literally it. No extra api calls except generating the base response, no 
 Below is the link to my chat completion preset:
 https://drive.google.com/drive/folders/12PKmpHMBlhv4zWRBtAY0bYV_uIdcSzAp?usp=sharing
 
-Goes best with its sibling extension [Sillytavern-Message-Themer](https://github.com/sr33sha/Sillytavern-Message-Themer)
+Goes best with its sibling extension, [Sillytavern-Message-Themer](https://github.com/sr33sha/Sillytavern-Message-Themer)
