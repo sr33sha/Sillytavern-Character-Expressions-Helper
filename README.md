@@ -11,7 +11,7 @@ Forms are denoted as letters, A is basically fallback so character root folder, 
 
 # Guide:
 
-1. Sprites folder has a copy of default sprites.js and the new one you will overwrite the original sprites.js with which is located in src/endpoints. Don't forget to keep a backup of the original sprites.js
+1. Sprites folder has sprites_default.js which is the default Sillytavern copy and the new sprites.js, which is what you'll append with the default located in src/endpoints. Don't forget to keep a backup of the original sprites.js
 2. Install the extension with the github repo link
 3. In default Character Expressions Extension set Classifier API to None so there are no API calls and you are set.
 
