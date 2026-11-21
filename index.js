@@ -76,13 +76,21 @@ function fuzzyMatchLabel(raw, labels) {
     const lower = raw.toLowerCase();
     const ci = labels.find(l => l.toLowerCase() === lower);
     if (ci) return ci;
-    // 3. Closest edit distance ≤ 2
-    let best = null, bestDist = 3;
+    // 3. Edit distance ≤ 2  OR  shared prefix ≥ 4 chars covering ≥ 60% of the shorter word
+    //    Covers: anger→angry (dist 2), annoyance→annoyed (prefix "annoy" = 5/7 = 71%), surprise→surprised (dist 1)
+    let best = null, bestDist = Infinity;
     for (const l of labels) {
-        const d = editDistance(lower, l.toLowerCase());
-        if (d < bestDist) { bestDist = d; best = l; }
+        const ll = l.toLowerCase();
+        const dist = editDistance(lower, ll);
+        let lcp = 0;
+        while (lcp < lower.length && lcp < ll.length && lower[lcp] === ll[lcp]) lcp++;
+        const minLen = Math.min(lower.length, ll.length);
+        const lcpMatch = lcp >= 4 && lcp / minLen >= 0.6;
+        if (dist <= 2 || lcpMatch) {
+            if (dist < bestDist) { bestDist = dist; best = l; }
+        }
     }
-    return best; // null if nothing within distance 2
+    return best; // null if nothing qualifies
 }
 
 function getFallback() {
