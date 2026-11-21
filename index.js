@@ -50,6 +50,41 @@ function updateFormInputs(avatar) {
     if (dEl) dEl.value = f.formD;
 }
 
+function editDistance(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, (_, i) => {
+        const row = new Array(n + 1).fill(0);
+        row[0] = i;
+        return row;
+    });
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = a[i - 1] === b[j - 1]
+                ? dp[i - 1][j - 1]
+                : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        }
+    }
+    return dp[m][n];
+}
+
+function fuzzyMatchLabel(raw, labels) {
+    if (!raw || labels.length === 0) return null;
+    // 1. Exact match
+    if (labels.includes(raw)) return raw;
+    // 2. Case-insensitive exact
+    const lower = raw.toLowerCase();
+    const ci = labels.find(l => l.toLowerCase() === lower);
+    if (ci) return ci;
+    // 3. Closest edit distance ≤ 2
+    let best = null, bestDist = 3;
+    for (const l of labels) {
+        const d = editDistance(lower, l.toLowerCase());
+        if (d < bestDist) { bestDist = d; best = l; }
+    }
+    return best; // null if nothing within distance 2
+}
+
 function getFallback() {
     const { extensionSettings } = SillyTavern.getContext();
     return extensionSettings.expressions?.fallback_expression || 'neutral';
@@ -162,8 +197,8 @@ async function buildAndInjectSpriteData(folder) {
     }
 
     const instruction = hasSubforms
-        ? 'Select the form matching the character\'s current physical state, then choose an expression from THAT form\'s list only.'
-        : 'Select an expression from the list above.';
+        ? 'These expression strings are exact and case-sensitive. Use only a string from the chosen form\'s list above, verbatim — do not rephrase, pluralize, shorten, or modify any name. Select the form matching the character\'s current physical state, then choose an expression from THAT form\'s list only.'
+        : 'These expression strings are exact and case-sensitive. Use only a string from the list above, verbatim — do not rephrase, pluralize, shorten, or modify any name.';
 
     const injection = `<Sprite_Data>\n${formLines.join('\n')}\n${instruction}\n</Sprite_Data>`;
     setExtensionPrompt(MODULE_NAME, injection, 0, 1);
@@ -177,7 +212,7 @@ async function applySprite(mes, charFolder) {
     if (!expressionRaw || expressionRaw === 'null') return false;
     const targetFolder = form === 'A' ? charFolder : getSubfolder(charFolder, form);
     const labels = await getAvailableLabels(form === 'A' ? charFolder : targetFolder);
-    const expression = labels.includes(expressionRaw) ? expressionRaw : getFallback();
+    const expression = fuzzyMatchLabel(expressionRaw, labels) ?? getFallback();
     await sendExpressionCall(targetFolder, expression);
     // Capture the sprite URL so the observer can restore it when moduleWorker clears img.src.
     // sendExpressionCall may update img.src asynchronously, so check both now and next frame.
