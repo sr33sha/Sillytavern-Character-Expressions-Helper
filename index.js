@@ -1,4 +1,4 @@
-﻿// ST-Expressions-Helper — uses SillyTavern.getContext() exclusively, no named imports
+// ST-Expressions-Helper — uses SillyTavern.getContext() exclusively, no named imports
 
 const MODULE_NAME = 'expressions_helper';
 const _scriptSrc = document.currentScript?.src ?? '';
@@ -133,19 +133,39 @@ async function buildAndInjectSpriteData(folder) {
         detectedEl.textContent = detected;
     }
 
-    const labelsStr = labels.map(l => `"${l}"`).join(', ');
+    // Fetch labels for every subfolder in parallel
+    const subLabelsMap = {};
+    await Promise.all(
+        Object.entries(newFormMap).map(([slot, sub]) =>
+            getAvailableLabels(`${folder}/${sub}`).then(lbls => { subLabelsMap[slot] = lbls; })
+        )
+    );
+
+    // Build per-form injection lines
     const hasSubforms = Object.keys(newFormMap).length > 0;
-    const formADesc = hasSubforms
-        ? 'Form A — base sprites (fallback; choose only when none of the specific named forms below apply to this scene)'
-        : 'Form A — default';
-    const formLines = [formADesc];
-    for (const slot of slots) {
-        if (newFormMap[slot]) {
-            const name = newFormMap[slot];
-            formLines.push(`Form ${slot} — ${name} (use when the character is in ${name} form)`);
-        }
+    const formLines = [];
+
+    const aLabelsStr = labels.map(l => `"${l}"`).join(', ');
+    if (hasSubforms) {
+        formLines.push(`Form A — base sprites (fallback; choose only when none of the specific named forms below apply to this scene): ${aLabelsStr}`);
+    } else {
+        formLines.push(`Form A — default: ${aLabelsStr}`);
     }
-    const injection = `<Sprite_Data>\nAvailable expressions: ${labelsStr}\n${formLines.join('\n')}\nSelect the single form letter that matches the character's current physical state in this scene.\n</Sprite_Data>`;
+
+    for (const slot of slots) {
+        if (!newFormMap[slot]) continue;
+        const subLabels = subLabelsMap[slot] || [];
+        if (subLabels.length === 0) continue; // skip empty subfolders
+        const name = newFormMap[slot];
+        const subLabelsStr = subLabels.map(l => `"${l}"`).join(', ');
+        formLines.push(`Form ${slot} — ${name} (use when the character is in ${name} form): ${subLabelsStr}`);
+    }
+
+    const instruction = hasSubforms
+        ? 'Select the form matching the character\'s current physical state, then choose an expression from THAT form\'s list only.'
+        : 'Select an expression from the list above.';
+
+    const injection = `<Sprite_Data>\n${formLines.join('\n')}\n${instruction}\n</Sprite_Data>`;
     setExtensionPrompt(MODULE_NAME, injection, 0, 1);
 }
 
